@@ -2,12 +2,16 @@
 // Main App and Vue instance
 //
 var app = new Vue({
-  
+
   // Root element
   el: '#app',
 
   // Top level state
   data: {
+    oldest:0,
+    oldestPhotoReference:'',
+    youngest:100,
+    youngestPhotoReference:'',
     results: [],
     blobs: [],
     timer: null,
@@ -37,7 +41,7 @@ var app = new Vue({
 
   // App methods
   methods: {
-    
+
     // Fetch data results from Azure
     refreshData: function () {
       if(!this.storageAccount) return;
@@ -48,16 +52,16 @@ var app = new Vue({
         if (error) {
           console.log(error);
         } else {
-          // Loop through results 
+          // Loop through results
           for (var i = 0, blob; blob = results.entries[i]; i++) {
             var blobName = blob.name;
-            
+
             // Only add new items, so check if id already added, saves on network traffic
             if(!this.blobs.includes(blobName)) {
               this.blobs.push(blobName);
               let blobUrl = `https://${this.storageAccount}.blob.core.windows.net/${CONTAINER}/${blobName}`;
               //console.log(`### Fetching ${blobUrl}`);
-              
+
               // Each blob is a chunk of JSON which we need to fetch remotely
               fetch(blobUrl)
               .then(resp => {
@@ -74,12 +78,32 @@ var app = new Vue({
               })
 
             } else {
-              // Ignore 
+              // Ignore
             }
           }
         }
       });
-      
+
+      // Get oldest and youngest
+      for(var i = 0, photo; photo = this.results[i]; i++){
+        if(photo.faces && photo.faces.length > 0){
+
+          for(var x = 0, face; face = photo.faces[x]; x++){
+            if(face.age){
+              if(face.age > this.oldest){
+                this.oldest = face.age;
+                this.oldestPhotoReference = photo.requestId;
+              }
+
+              if(face.age < this.youngest){
+                this.youngest = face.age;
+                this.youngestPhotoReference = photo.requestId;
+              }
+            }
+          }
+        }
+      }
+
       this.updating = false;
     }
   }
